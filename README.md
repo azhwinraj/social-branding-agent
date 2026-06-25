@@ -83,13 +83,14 @@ cd ..
 
 ## Run
 
-```powershell
-.\launch.ps1
-```
+| OS | Command |
+|---|---|
+| Windows | Double-click **`launch.bat`** |
+| Mac / Linux | `chmod +x launch.sh && ./launch.sh` |
 
-Opens two terminal windows (backend + frontend) and launches the browser at `http://localhost:5173`.
+On first run it installs all dependencies automatically. On subsequent runs it starts both servers and opens the browser at `http://localhost:5173`.
 
-To stop: close both terminal windows.
+To stop: close the Backend and Frontend terminal windows.
 
 ## API keys
 

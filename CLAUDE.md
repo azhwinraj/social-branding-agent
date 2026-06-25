@@ -8,7 +8,7 @@ This is the file Claude Code reads at the start of every session. It is the sour
 
 ## Stack at a glance
 
-- **Launcher:** `launch.ps1` (PowerShell — starts both servers, opens browser)
+- **Launcher:** `launch.bat` (Windows) / `launch.sh` (Mac/Linux) — starts both servers, opens browser
 - **Frontend:** SvelteKit 2.x + TypeScript
 - **Backend:** FastAPI (Python 3.12)
 - **Orchestration:** LangGraph 1.0
@@ -23,8 +23,9 @@ This is the file Claude Code reads at the start of every session. It is the sour
 ## Key commands
 
 ### Launch (from repo root)
-```powershell
-.\launch.ps1          # start both servers and open browser
+```
+launch.bat            # Windows — double-click or run in cmd
+./launch.sh           # Mac / Linux
 ```
 
 ### Backend (run from `backend/`)
@@ -56,7 +57,8 @@ uv run python bench/runner.py --inputs bench/inputs/ --output bench/results/
 ## Folder structure (canonical)
 social-branding-agent/
 
-├── launch.ps1              # single-command launcher (dev mode)
+├── launch.bat              # Windows launcher (double-click)
+├── launch.sh               # Mac/Linux launcher
 
 ├── frontend/               # SvelteKit
 
