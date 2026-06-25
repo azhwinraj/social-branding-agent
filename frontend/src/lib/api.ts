@@ -74,6 +74,63 @@ export async function regenerateDraft(
 	return data.draft_output as SavedDraft;
 }
 
+export interface Revision {
+	id: string;
+	draft_id: number;
+	revision_number: number;
+	content: string;
+	refinement_instruction: string | null;
+	model_used: string;
+	tier: number;
+	is_current: boolean;
+	created_at: string;
+	tokens_in: number | null;
+	tokens_out: number | null;
+	cost_usd: number | null;
+	latency_ms: number | null;
+	adherence_passed: boolean | null;
+}
+
+export async function listRevisions(
+	draftId: number,
+): Promise<{ revisions: Revision[]; total: number; refinement_count: number; soft_limit: number }> {
+	const res = await fetch(`${BASE}/drafts/${draftId}/revisions`);
+	if (!res.ok) throw new Error('Failed to load revisions');
+	return res.json();
+}
+
+export async function refineInstruction(
+	draftId: number,
+	instruction: string,
+): Promise<{ revision: Revision; warning: string | null }> {
+	const res = await fetch(`${BASE}/drafts/${draftId}/refine`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ instruction }),
+	});
+	if (!res.ok) {
+		const err = await res.json().catch(() => ({}));
+		throw new Error(err.detail ?? 'Refinement failed');
+	}
+	return res.json();
+}
+
+export async function revertRevision(
+	draftId: number,
+	revisionNumber: number,
+): Promise<{ current_revision: Revision }> {
+	const res = await fetch(`${BASE}/drafts/${draftId}/revert`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ revision_number: revisionNumber }),
+	});
+	if (!res.ok) {
+		const err = await res.json().catch(() => ({}));
+		throw new Error(err.detail ?? 'Revert failed');
+	}
+	return res.json();
+}
+
 export async function scheduleDraft(id: number, scheduledAt: Date): Promise<void> {
 	const res = await fetch(`${BASE}/drafts/${id}/schedule`, {
 		method: 'POST',
