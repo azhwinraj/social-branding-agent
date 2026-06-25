@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.graph.builder import graph
 from app.graph.state import AgentState
 from app.llm.embed import embed
+from app.scheduler.jobs import schedule_draft
 
 router = APIRouter()
 
@@ -20,6 +21,10 @@ class GenerateRequest(BaseModel):
     platforms: list[str] = ["linkedin", "x", "medium"]
     image_description: str | None = None
     research: str = "auto"  # "auto" | "on" | "off"
+
+
+class ScheduleRequest(BaseModel):
+    scheduled_at: datetime  # ISO 8601 from frontend
 
 
 @router.get("/health")
@@ -33,6 +38,7 @@ async def generate(req: GenerateRequest):
     context = req.context
     if req.image_description:
         context = f"[Image attached: {req.image_description}]\n\n{context}"
+
     research_override: bool | None = None
     if req.research == "on":
         research_override = True
@@ -61,6 +67,7 @@ async def list_drafts(db: Session = Depends(get_db)):
             "status": r.status,
             "total_cost_usd": r.total_cost_usd,
             "created_at": r.created_at.isoformat(),
+            "scheduled_at": r.scheduled_at.isoformat() if r.scheduled_at else None,
         }
         for r in rows
     ]
@@ -87,7 +94,24 @@ async def approve_draft(draft_id: int, db: Session = Depends(get_db)):
         vector = await embed(draft.content)
         example.embedding = json.dumps(vector)
     except Exception:
-        pass  # embedding failure doesn't block approval
+        pass
 
     db.commit()
     return {"status": "approved", "id": draft_id, "embedding": example.embedding is not None}
+
+
+@router.post("/drafts/{draft_id}/schedule")
+async def schedule_draft_route(
+    draft_id: int, req: ScheduleRequest, db: Session = Depends(get_db)
+):
+    draft = db.query(Draft).filter(Draft.id == draft_id).first()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+
+    draft.scheduled_at = req.scheduled_at
+    draft.status = "scheduled"
+    db.commit()
+
+    schedule_draft(draft_id, draft.platform, draft.content, req.scheduled_at)
+
+    return {"status": "scheduled", "scheduled_at": req.scheduled_at.isoformat()}

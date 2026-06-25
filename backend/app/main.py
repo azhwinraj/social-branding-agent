@@ -4,8 +4,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.routes import router
-from app.db.session import engine
+from app.db.session import engine, SessionLocal
 from app.db.models import Base
+from app.scheduler.jobs import scheduler, reload_pending
 
 
 @asynccontextmanager
@@ -29,7 +30,13 @@ async def lifespan(app: FastAPI):
     # Create tables if they don't exist (Alembic handles migrations in prod)
     Base.metadata.create_all(bind=engine)
 
+    # Start scheduler and reload any pending jobs from the DB
+    scheduler.start()
+    reload_pending(SessionLocal)
+
     yield
+
+    scheduler.shutdown(wait=False)
 
 
 app = FastAPI(title="Social Branding Agent", version="0.1.0", lifespan=lifespan)

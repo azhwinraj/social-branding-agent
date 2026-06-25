@@ -8,6 +8,7 @@ export interface SavedDraft {
 	status: string;
 	total_cost_usd: number;
 	created_at: string;
+	scheduled_at: string | null;
 }
 
 export async function healthCheck(): Promise<{ status: string; service: string }> {
@@ -49,4 +50,13 @@ export async function listDrafts(): Promise<SavedDraft[]> {
 	const res = await fetch(`${BASE}/drafts`);
 	if (!res.ok) throw new Error('Failed to load drafts');
 	return res.json();
+}
+
+export async function scheduleDraft(id: number, scheduledAt: Date): Promise<void> {
+	const res = await fetch(`${BASE}/drafts/${id}/schedule`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ scheduled_at: scheduledAt.toISOString() }),
+	});
+	if (!res.ok) throw new Error('Schedule failed');
 }
