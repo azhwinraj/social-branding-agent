@@ -19,11 +19,27 @@ async def _linkedin(state: AgentState) -> dict:
 
 
 async def _x(state: AgentState) -> dict:
-    return {}  # Phase C
+    if "x" not in state.platforms:
+        return {}
+    messages = [
+        {"role": "system", "content": load("x_gen.md")},
+        {"role": "user", "content": state.context_input},
+    ]
+    with SessionLocal() as db:
+        content, meta = await call("x_gen", "x", messages, state.run_id, db)
+    return {"platform": "x", "content": content, **meta}
 
 
 async def _medium(state: AgentState) -> dict:
-    return {}  # Phase C
+    if "medium" not in state.platforms:
+        return {}
+    messages = [
+        {"role": "system", "content": load("medium_gen.md")},
+        {"role": "user", "content": state.context_input},
+    ]
+    with SessionLocal() as db:
+        content, meta = await call("medium_gen", "medium", messages, state.run_id, db)
+    return {"platform": "medium", "content": content, **meta}
 
 
 async def generators(state: AgentState) -> dict:

@@ -9,6 +9,7 @@
 		prompt_tokens: number;
 		completion_tokens: number;
 		cost_usd: number;
+		adherence_warning?: boolean;
 	}
 
 	let backendStatus = $state<'checking' | 'ok' | 'error'>('checking');
@@ -108,7 +109,7 @@
 				<div class="draft-header">
 					<span class="platform">{draft.platform}</span>
 					<span class="draft-meta">
-						{draft.prompt_tokens + draft.completion_tokens} tokens · ${draft.cost_usd.toFixed(6)} · {draft.model.split('/').pop()}
+						{#if draft.adherence_warning}<span class="warn">⚠ adherence</span> · {/if}{draft.prompt_tokens + draft.completion_tokens} tokens · ${draft.cost_usd.toFixed(6)} · {draft.model.split('/').pop()}
 					</span>
 				</div>
 				<pre class="draft-content">{draft.content}</pre>
@@ -209,6 +210,7 @@
 		font-size: 0.75rem;
 		color: #6b7280;
 	}
+	.warn { color: #fbbf24; }
 
 	.draft-content {
 		padding: 1rem;

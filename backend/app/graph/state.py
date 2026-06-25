@@ -1,6 +1,4 @@
-from typing import Annotated
 from dataclasses import dataclass, field
-from operator import add
 
 
 @dataclass
@@ -10,5 +8,5 @@ class AgentState:
     needs_research: bool = False
     research_results: str = ""
     style_examples: dict[str, list[str]] = field(default_factory=dict)
-    drafts: Annotated[list[dict], add] = field(default_factory=list)
+    drafts: list[dict] = field(default_factory=list)
     run_id: str = ""
