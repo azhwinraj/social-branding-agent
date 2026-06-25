@@ -1,13 +1,16 @@
+import json
 import uuid
+from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.db.models import Draft
+from app.db.models import Draft, StyleExample
 from app.db.session import get_db
 from app.graph.builder import graph
 from app.graph.state import AgentState
+from app.llm.embed import embed
 
 router = APIRouter()
 
@@ -49,3 +52,30 @@ async def list_drafts(db: Session = Depends(get_db)):
         }
         for r in rows
     ]
+
+
+@router.post("/drafts/{draft_id}/approve")
+async def approve_draft(draft_id: int, db: Session = Depends(get_db)):
+    draft = db.query(Draft).filter(Draft.id == draft_id).first()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+
+    draft.status = "approved"
+    draft.approved_at = datetime.utcnow()
+
+    example = StyleExample(
+        draft_id=draft.id,
+        platform=draft.platform,
+        content=draft.content,
+    )
+    db.add(example)
+    db.flush()
+
+    try:
+        vector = await embed(draft.content)
+        example.embedding = json.dumps(vector)
+    except Exception:
+        pass  # embedding failure doesn't block approval
+
+    db.commit()
+    return {"status": "approved", "id": draft_id, "embedding": example.embedding is not None}

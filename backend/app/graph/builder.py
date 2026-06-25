@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph, END
 
 from app.config import settings
 from app.graph.state import AgentState
+from app.graph.nodes.style_memory import style_memory
 from app.graph.nodes.generators import generators
 from app.graph.nodes.adherence import adherence
 from app.graph.nodes.aggregator import aggregator
@@ -27,14 +28,16 @@ def build_graph():
 
     builder = StateGraph(AgentState)
 
-    # Phase D will wire style_memory; Phase E will wire research with a conditional edge
+    # Phase E will add research with a conditional edge from router
     builder.add_node("router", _stub_node("router"))
+    builder.add_node("style_memory", style_memory)
     builder.add_node("generators", generators)
     builder.add_node("adherence", adherence)
     builder.add_node("aggregator", aggregator)
 
     builder.set_entry_point("router")
-    builder.add_edge("router", "generators")
+    builder.add_edge("router", "style_memory")
+    builder.add_edge("style_memory", "generators")
     builder.add_edge("generators", "adherence")
     builder.add_edge("adherence", "aggregator")
     builder.add_edge("aggregator", END)

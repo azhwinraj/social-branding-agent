@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import String, Text, Float, Integer, DateTime, ForeignKey
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -33,3 +33,14 @@ class Draft(Base):
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     total_cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     embedding_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class StyleExample(Base):
+    __tablename__ = "style_examples"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    draft_id: Mapped[int] = mapped_column(Integer, ForeignKey("drafts.id"), nullable=False)
+    platform: Mapped[str] = mapped_column(String(32), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list[float]
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
