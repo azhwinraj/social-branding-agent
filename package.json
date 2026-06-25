@@ -1,0 +1,8 @@
+{
+  "name": "social-branding-agent",
+  "private": true,
+  "scripts": {
+    "dev:backend": "cd backend && uv run uvicorn app.main:app --reload --port 8000",
+    "dev:frontend": "npm run dev --prefix frontend"
+  }
+}

@@ -1,6 +1,6 @@
 # Social Branding Agent
 
-A desktop AI agent that drafts platform-specific posts for LinkedIn, X, and Medium from a single context input, using a cost-optimized multi-provider LLM cascade with vector-based style memory and approval-gated scheduling.
+A web-based AI agent that drafts platform-specific posts for LinkedIn, X, and Medium from a single context input, using a cost-optimized multi-provider LLM cascade with vector-based style memory and approval-gated scheduling.
 
 This is the file Claude Code reads at the start of every session. It is the source of truth for how this repo works. Keep it short. Move detailed workflows to `.claude/skills/` and specialized expertise to `.claude/agents/`.
 
@@ -8,18 +8,24 @@ This is the file Claude Code reads at the start of every session. It is the sour
 
 ## Stack at a glance
 
-- **Shell:** Tauri 2.0 (Rust)
+- **Launcher:** `launch.ps1` (PowerShell — starts both servers, opens browser)
 - **Frontend:** SvelteKit 2.x + TypeScript
 - **Backend:** FastAPI (Python 3.12)
 - **Orchestration:** LangGraph 1.0
 - **LLM gateway:** LiteLLM
 - **Database:** SQLite + sqlite-vec + SQLAlchemy 2.0
 - **Scheduling:** APScheduler
+- **Desktop notifications:** plyer (cross-platform toast from Python)
 - **Phone push:** ntfy.sh
 
 ---
 
 ## Key commands
+
+### Launch (from repo root)
+```powershell
+.\launch.ps1          # start both servers and open browser
+```
 
 ### Backend (run from `backend/`)
 ```bash
@@ -40,12 +46,6 @@ npm run build                               # production build
 npm run check                               # svelte-check + tsc
 ```
 
-### Tauri (run from repo root)
-```bash
-cargo tauri dev                             # dev mode with hot reload
-cargo tauri build                           # production build
-```
-
 ### Bench
 ```bash
 uv run python bench/runner.py --inputs bench/inputs/ --output bench/results/
@@ -56,7 +56,7 @@ uv run python bench/runner.py --inputs bench/inputs/ --output bench/results/
 ## Folder structure (canonical)
 social-branding-agent/
 
-├── src-tauri/              # Rust shell (~30 lines, mostly boilerplate)
+├── launch.ps1              # single-command launcher (dev mode)
 
 ├── frontend/               # SvelteKit
 
@@ -90,7 +90,7 @@ See `docs/ARCHITECTURE.md` for the full system diagram.
 
 ## How the agent works (one paragraph)
 
-The user submits a context (text + optional images) via the SvelteKit frontend. FastAPI invokes a LangGraph state machine. A router node (Llama 3.1 8B on Groq free tier) decides which platforms to target and whether research is needed. If research is needed, the Tavily node runs. A style-memory node embeds the context via Gemini embedding-001 and retrieves the top-3 most similar past approved posts per platform from sqlite-vec. Three platform generator nodes (LinkedIn / X / Medium) run in parallel — each uses a 3-tier model cascade (free → free → Claude failsafe). An adherence validator runs platform-specific rules and regenerates once on failure. The aggregator persists drafts with full cost/token telemetry and surfaces them in the UI for human approval. Approved drafts can be scheduled; APScheduler triggers desktop + ntfy.sh phone notifications at the scheduled time.
+The user submits a context (text + optional images) via the SvelteKit frontend (http://localhost:5173). FastAPI invokes a LangGraph state machine. A router node (Llama 3.1 8B on Groq free tier) decides which platforms to target and whether research is needed. If research is needed, the Tavily node runs. A style-memory node embeds the context via Gemini embedding-001 and retrieves the top-3 most similar past approved posts per platform from sqlite-vec. Three platform generator nodes (LinkedIn / X / Medium) run in parallel — each uses a 3-tier model cascade (free → free → Claude failsafe). An adherence validator runs platform-specific rules and regenerates once on failure. The aggregator persists drafts with full cost/token telemetry and surfaces them in the UI for human approval. Approved drafts can be scheduled; APScheduler triggers a plyer desktop toast + ntfy.sh phone notification at the scheduled time.
 
 ---
 
@@ -141,22 +141,22 @@ The user submits a context (text + optional images) via the SvelteKit frontend. 
 
 ---
 
-## Build phases (current status: <UPDATE EACH SESSION>)
+## Build phases (current status: Phase B — LLM gateway + LinkedIn draft)
 
 The repo is built in phases. Each phase has a single PR (or short PR sequence) and a definition of done. Do not start phase N+1 before phase N is merged.
 
 | Phase | Goal | DoD |
 |---|---|---|
-| A | Foundation: Tauri + Svelte + FastAPI skeleton, SQLite ready, LangSmith trace working | Run `cargo tauri dev`, click button, see backend response. LangSmith shows the trace. |
+| A | Foundation: SvelteKit + FastAPI skeleton, SQLite ready, LangSmith trace working | Run `.\launch.ps1`, click Generate, see backend response in browser. LangSmith shows the trace. |
 | B | LLM gateway + single-platform (LinkedIn, Tier 1 only) | Submit context, see LinkedIn draft with token count and cost in 5s. |
 | C | Multi-platform fan-out + adherence rules | All three platforms generate in parallel; failing drafts get one regenerate attempt. |
 | D | Style memory (sqlite-vec + Gemini embedding) | After 5 approved posts, 6th draft visibly matches voice. Embeddings populated in DB. |
 | E | Research (Tavily, conditional) + image pass-through | "What's new in MCP this month?" triggers research; image upload attaches metadata. |
-| F | Scheduling + desktop + ntfy.sh phone push | Schedule post 2 min ahead; phone buzzes on time. |
+| F | Scheduling + plyer desktop toast + ntfy.sh phone push | Schedule post 2 min ahead; desktop toast + phone buzz on time. |
 | G | Polish mode + full 3-tier cascade | Same input in all 3 quality modes produces measurably different cost + quality. |
 | H | Stats dashboard + observability polish | Two weeks of usage; stats match billing dashboards. |
 | I | Side benchmark (lean + bloated) + BENCHMARKS.md | `python bench/runner.py` produces results.json and updated BENCHMARKS.md. |
-| J | Packaging + open-source readiness | Someone downloads `.dmg` / `.exe` / `.AppImage`, adds API keys in Settings, uses the app. |
+| J | Packaging + open-source readiness | `launch.ps1` works on a clean Windows machine with only Python + Node installed. README install steps verified. |
 
 Deferred (post-v1): K (vision analysis), V2 (MCP auto-post via linkedin-mcp + x-mcp).
 
