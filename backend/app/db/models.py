@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Text, Float, Integer, DateTime, ForeignKey
+from sqlalchemy import Boolean, String, Text, Float, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -33,6 +33,9 @@ class Draft(Base):
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     total_cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     embedding_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    post_types_json: Mapped[str | None] = mapped_column(Text, nullable=True)       # full {"linkedin": "project_showcase", ...} for the run
+    post_type: Mapped[str | None] = mapped_column(String(64), nullable=True)       # per-platform type for this draft row
+    model_tier: Mapped[int | None] = mapped_column(Integer, nullable=True)         # 0-indexed cascade tier used (for refinement inheritance)
 
 
 class StyleExample(Base):
@@ -43,4 +46,25 @@ class StyleExample(Base):
     platform: Mapped[str] = mapped_column(String(32), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON list[float]
+    post_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class DraftRevision(Base):
+    __tablename__ = "draft_revisions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    draft_id: Mapped[int] = mapped_column(Integer, ForeignKey("drafts.id", ondelete="CASCADE"), nullable=False)
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    refinement_instruction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    model_used: Mapped[str] = mapped_column(String(128), nullable=False)
+    tier: Mapped[int] = mapped_column(Integer, nullable=False)
+    tokens_in: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_out: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    cost_usd: Mapped[float | None] = mapped_column(Float, nullable=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    adherence_passed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    adherence_failures: Mapped[str | None] = mapped_column(Text, nullable=True)    # JSON array of rule names
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
