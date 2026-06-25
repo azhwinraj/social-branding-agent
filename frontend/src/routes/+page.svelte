@@ -21,6 +21,13 @@
 	let runId = $state<string | null>(null);
 	let imageDescription = $state<string | null>(null);
 	let research = $state<'auto' | 'on' | 'off'>('auto');
+	let mode = $state<'fast' | 'balanced' | 'polish'>('balanced');
+
+	const modeLabels: Record<string, string> = {
+		fast: '⚡ Fast',
+		balanced: '⚖ Balanced',
+		polish: '✦ Polish',
+	};
 
 	function handleImageChange(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
@@ -48,7 +55,7 @@
 		error = null;
 		runId = null;
 		try {
-			const data = await generate(context, platforms, imageDescription ?? undefined, research);
+			const data = await generate(context, platforms, imageDescription ?? undefined, research, mode);
 			drafts = data.drafts;
 			runId = data.run_id;
 		} catch (e) {
@@ -83,6 +90,17 @@
 
 	<div class="row-controls">
 		<div class="control-group">
+			<span class="control-label">Mode</span>
+			{#each ['fast', 'balanced', 'polish'] as m}
+				<button
+					class="seg-btn"
+					class:active={mode === m}
+					class:polish={m === 'polish' && mode === 'polish'}
+					onclick={() => mode = m as 'fast' | 'balanced' | 'polish'}
+				>{modeLabels[m]}</button>
+			{/each}
+		</div>
+		<div class="control-group">
 			<span class="control-label">Research</span>
 			{#each ['auto', 'on', 'off'] as opt}
 				<button
@@ -93,6 +111,11 @@
 			{/each}
 		</div>
 	</div>
+	{#if mode === 'polish'}
+		<p class="mode-hint">Polish uses Claude Haiku as Tier 1 — higher quality, small cost per run.</p>
+	{:else if mode === 'fast'}
+		<p class="mode-hint">Fast uses Llama 3.1-8B only — instant and free, lower quality.</p>
+	{/if}
 
 	<label class="image-label">
 		<span>Attach image (optional)</span>
@@ -226,6 +249,8 @@
 		cursor: pointer;
 	}
 	.seg-btn.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+	.seg-btn.polish { background: #6d28d9; border-color: #6d28d9; }
+	.mode-hint { font-size: 0.78rem; color: #6b7280; margin-top: -0.25rem; }
 
 	.image-label {
 		display: flex;

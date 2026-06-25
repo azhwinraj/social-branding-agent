@@ -5,25 +5,34 @@ from sqlalchemy.orm import Session
 
 from app.db.models import LlmCall
 
-CASCADES: dict[str, list[str]] = {
-    "router": [
+# Router always uses the fast small model — routing doesn't need quality escalation.
+_ROUTER = ["groq/llama-3.1-8b-instant"]
+
+# Per-platform tiers by quality mode.
+# fast    → small free model only (speed + zero cost)
+# balanced → large free model with two fallbacks (current default)
+# polish  → Claude Haiku as Tier 1 (quality first, cost secondary)
+_PLATFORM_TIERS: dict[str, list[str]] = {
+    "fast": [
         "groq/llama-3.1-8b-instant",
+        "groq/llama-3.3-70b-versatile",       # fallback if 8B fails
     ],
-    "linkedin": [
+    "balanced": [
         "groq/llama-3.3-70b-versatile",
         "groq/llama-3.1-70b-versatile",
-        "anthropic/claude-haiku-4-5-20251001",
+        "anthropic/claude-haiku-4-5-20251001", # failsafe
     ],
-    "x": [
-        "groq/llama-3.3-70b-versatile",
-        "groq/llama-3.1-70b-versatile",
-        "anthropic/claude-haiku-4-5-20251001",
+    "polish": [
+        "anthropic/claude-haiku-4-5-20251001", # Claude as Tier 1 in polish mode
+        "groq/llama-3.3-70b-versatile",        # fallback if Anthropic key missing
     ],
-    "medium": [
-        "groq/llama-3.3-70b-versatile",
-        "groq/llama-3.1-70b-versatile",
-        "anthropic/claude-haiku-4-5-20251001",
-    ],
+}
+
+CASCADES: dict[str, dict[str, list[str]]] = {
+    "router":  {"fast": _ROUTER, "balanced": _ROUTER, "polish": _ROUTER},
+    "linkedin": _PLATFORM_TIERS,
+    "x":        _PLATFORM_TIERS,
+    "medium":   _PLATFORM_TIERS,
 }
 
 
@@ -33,10 +42,12 @@ async def call(
     messages: list[dict[str, str]],
     run_id: str,
     db: Session,
+    mode: str = "balanced",
 ) -> tuple[str, dict]:
+    tiers = CASCADES[cascade_key][mode]
     last_error: Exception | None = None
 
-    for model in CASCADES[cascade_key]:
+    for model in tiers:
         try:
             resp = await litellm.acompletion(model=model, messages=messages)
             content: str = resp.choices[0].message.content or ""
@@ -66,4 +77,4 @@ async def call(
         except Exception as e:
             last_error = e
 
-    raise RuntimeError(f"All tiers failed for {cascade_key}: {last_error}")
+    raise RuntimeError(f"All tiers failed for {cascade_key}/{mode}: {last_error}")

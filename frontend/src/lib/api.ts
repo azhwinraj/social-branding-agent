@@ -31,6 +31,7 @@ export async function generate(
 	platforms: string[],
 	imageDescription?: string,
 	research: 'auto' | 'on' | 'off' = 'auto',
+	mode: 'fast' | 'balanced' | 'polish' = 'balanced',
 ): Promise<{ drafts: Draft[]; run_id: string }> {
 	const res = await fetch(`${BASE}/generate`, {
 		method: 'POST',
@@ -40,6 +41,7 @@ export async function generate(
 			platforms,
 			image_description: imageDescription ?? null,
 			research,
+			mode,
 		}),
 	});
 	if (!res.ok) throw new Error('Generate failed');

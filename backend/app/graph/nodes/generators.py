@@ -30,7 +30,9 @@ async def _linkedin(state: AgentState) -> dict:
         )},
     ]
     with SessionLocal() as db:
-        content, meta = await call("linkedin_gen", "linkedin", messages, state.run_id, db)
+        content, meta = await call(
+            "linkedin_gen", "linkedin", messages, state.run_id, db, state.quality_mode
+        )
     return {"platform": "linkedin", "content": content, **meta}
 
 
@@ -46,7 +48,9 @@ async def _x(state: AgentState) -> dict:
         )},
     ]
     with SessionLocal() as db:
-        content, meta = await call("x_gen", "x", messages, state.run_id, db)
+        content, meta = await call(
+            "x_gen", "x", messages, state.run_id, db, state.quality_mode
+        )
     return {"platform": "x", "content": content, **meta}
 
 
@@ -62,7 +66,9 @@ async def _medium(state: AgentState) -> dict:
         )},
     ]
     with SessionLocal() as db:
-        content, meta = await call("medium_gen", "medium", messages, state.run_id, db)
+        content, meta = await call(
+            "medium_gen", "medium", messages, state.run_id, db, state.quality_mode
+        )
     return {"platform": "medium", "content": content, **meta}
 
 

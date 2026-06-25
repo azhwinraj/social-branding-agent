@@ -20,7 +20,8 @@ class GenerateRequest(BaseModel):
     context: str
     platforms: list[str] = ["linkedin", "x", "medium"]
     image_description: str | None = None
-    research: str = "auto"  # "auto" | "on" | "off"
+    research: str = "auto"   # "auto" | "on" | "off"
+    mode: str = "balanced"   # "fast" | "balanced" | "polish"
 
 
 class ScheduleRequest(BaseModel):
@@ -49,6 +50,7 @@ async def generate(req: GenerateRequest):
         context_input=context,
         platforms=req.platforms,
         run_id=run_id,
+        quality_mode=req.mode,
         research_override=research_override,
     )
     result = await graph.ainvoke(state)

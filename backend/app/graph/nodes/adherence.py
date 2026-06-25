@@ -73,7 +73,7 @@ async def _retry(platform: str, draft: dict, issues: list[str], state: AgentStat
     try:
         with SessionLocal() as db:
             content, meta = await call(
-                f"{platform}_gen_retry", platform, messages, state.run_id, db
+                f"{platform}_gen_retry", platform, messages, state.run_id, db, state.quality_mode
             )
         return {"platform": platform, "content": content, **meta}
     except Exception:

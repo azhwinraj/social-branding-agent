@@ -5,8 +5,9 @@ from dataclasses import dataclass, field
 class AgentState:
     context_input: str = ""
     platforms: list[str] = field(default_factory=list)
+    quality_mode: str = "balanced"       # "fast" | "balanced" | "polish"
     needs_research: bool = False
-    research_override: bool | None = None  # None = auto, True/False = forced
+    research_override: bool | None = None
     research_results: str = ""
     style_examples: dict[str, list[str]] = field(default_factory=dict)
     drafts: list[dict] = field(default_factory=list)
