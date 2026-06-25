@@ -6,15 +6,16 @@ from app.llm.cascade import call
 from app.llm.prompts import load
 
 
-def _user_message(context: str, examples: list[str]) -> str:
-    if not examples:
-        return context
-    ex_block = "\n\n---\n\n".join(examples)
-    return (
-        f"{context}\n\n"
-        f"Here are examples of past approved posts in this person's voice — match the style:\n\n"
-        f"{ex_block}"
-    )
+def _user_message(context: str, research: str, examples: list[str]) -> str:
+    parts = [context]
+    if research:
+        parts.append(f"Current research on this topic:\n{research}")
+    if examples:
+        ex_block = "\n\n---\n\n".join(examples)
+        parts.append(
+            f"Here are examples of past approved posts in this person's voice — match the style:\n\n{ex_block}"
+        )
+    return "\n\n".join(parts)
 
 
 async def _linkedin(state: AgentState) -> dict:
@@ -23,7 +24,9 @@ async def _linkedin(state: AgentState) -> dict:
     messages = [
         {"role": "system", "content": load("linkedin_gen.md")},
         {"role": "user", "content": _user_message(
-            state.context_input, state.style_examples.get("linkedin", [])
+            state.context_input,
+            state.research_results,
+            state.style_examples.get("linkedin", []),
         )},
     ]
     with SessionLocal() as db:
@@ -37,7 +40,9 @@ async def _x(state: AgentState) -> dict:
     messages = [
         {"role": "system", "content": load("x_gen.md")},
         {"role": "user", "content": _user_message(
-            state.context_input, state.style_examples.get("x", [])
+            state.context_input,
+            state.research_results,
+            state.style_examples.get("x", []),
         )},
     ]
     with SessionLocal() as db:
@@ -51,7 +56,9 @@ async def _medium(state: AgentState) -> dict:
     messages = [
         {"role": "system", "content": load("medium_gen.md")},
         {"role": "user", "content": _user_message(
-            state.context_input, state.style_examples.get("medium", [])
+            state.context_input,
+            state.research_results,
+            state.style_examples.get("medium", []),
         )},
     ]
     with SessionLocal() as db:

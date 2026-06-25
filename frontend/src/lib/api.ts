@@ -25,11 +25,15 @@ export interface Draft {
 	cost_usd: number;
 }
 
-export async function generate(context: string, platforms: string[]): Promise<{ drafts: Draft[]; run_id: string }> {
+export async function generate(
+	context: string,
+	platforms: string[],
+	imageDescription?: string,
+): Promise<{ drafts: Draft[]; run_id: string }> {
 	const res = await fetch(`${BASE}/generate`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ context, platforms }),
+		body: JSON.stringify({ context, platforms, image_description: imageDescription ?? null }),
 	});
 	if (!res.ok) throw new Error('Generate failed');
 	return res.json();

@@ -19,6 +19,17 @@
 	let drafts = $state<Draft[]>([]);
 	let error = $state<string | null>(null);
 	let runId = $state<string | null>(null);
+	let imageDescription = $state<string | null>(null);
+
+	function handleImageChange(e: Event) {
+		const file = (e.target as HTMLInputElement).files?.[0];
+		if (file) {
+			const mb = (file.size / 1024 / 1024).toFixed(1);
+			imageDescription = `${file.name} (${mb} MB)`;
+		} else {
+			imageDescription = null;
+		}
+	}
 
 	onMount(async () => {
 		try {
@@ -36,7 +47,7 @@
 		error = null;
 		runId = null;
 		try {
-			const data = await generate(context, platforms);
+			const data = await generate(context, platforms, imageDescription ?? undefined);
 			drafts = data.drafts;
 			runId = data.run_id;
 		} catch (e) {
@@ -68,6 +79,12 @@
 		placeholder="What do you want to post about?"
 		rows={6}
 	></textarea>
+
+	<label class="image-label">
+		<span>Attach image (optional)</span>
+		<input type="file" accept="image/*" onchange={handleImageChange} />
+		{#if imageDescription}<span class="image-name">{imageDescription}</span>{/if}
+	</label>
 
 	<div class="platforms">
 		{#each ['linkedin', 'x', 'medium'] as p}
@@ -181,6 +198,16 @@
 		border-top: 1px solid #2a2a2a;
 	}
 	.run-id { font-family: monospace; }
+
+	.image-label {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		font-size: 0.85rem;
+		color: #a3a3a3;
+	}
+	.image-label input[type="file"] { font-size: 0.8rem; color: #6b7280; }
+	.image-name { color: #60a5fa; font-size: 0.8rem; }
 
 	.draft-card {
 		background: #1a1a1a;

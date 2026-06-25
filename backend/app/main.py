@@ -17,6 +17,8 @@ async def lifespan(app: FastAPI):
         os.environ["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
     if settings.gemini_api_key:
         os.environ["GEMINI_API_KEY"] = settings.gemini_api_key
+    if settings.tavily_api_key:
+        os.environ["TAVILY_API_KEY"] = settings.tavily_api_key
 
     # Set LangSmith env vars before anything imports langchain internals
     if settings.langchain_api_key:

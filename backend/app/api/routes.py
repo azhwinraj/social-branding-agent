@@ -18,6 +18,7 @@ router = APIRouter()
 class GenerateRequest(BaseModel):
     context: str
     platforms: list[str] = ["linkedin", "x", "medium"]
+    image_description: str | None = None  # filename + size from frontend upload
 
 
 @router.get("/health")
@@ -28,8 +29,11 @@ async def health():
 @router.post("/generate")
 async def generate(req: GenerateRequest):
     run_id = str(uuid.uuid4())
+    context = req.context
+    if req.image_description:
+        context = f"[Image attached: {req.image_description}]\n\n{context}"
     state = AgentState(
-        context_input=req.context,
+        context_input=context,
         platforms=req.platforms,
         run_id=run_id,
     )
