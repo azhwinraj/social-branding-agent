@@ -3,6 +3,8 @@ const BASE = 'http://localhost:8000/api';
 export interface SavedDraft {
 	id: number;
 	platform: string;
+	post_type: string | null;
+	post_types_json: string | null;
 	content: string;
 	context_input: string;
 	status: string;
@@ -32,7 +34,7 @@ export async function generate(
 	imageDescription?: string,
 	research: 'auto' | 'on' | 'off' = 'auto',
 	mode: 'fast' | 'balanced' | 'polish' = 'balanced',
-): Promise<{ drafts: Draft[]; run_id: string }> {
+): Promise<{ drafts: Draft[]; run_id: string; post_types: Record<string, string>; router_reasoning: string }> {
 	const res = await fetch(`${BASE}/generate`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -52,6 +54,24 @@ export async function listDrafts(): Promise<SavedDraft[]> {
 	const res = await fetch(`${BASE}/drafts`);
 	if (!res.ok) throw new Error('Failed to load drafts');
 	return res.json();
+}
+
+export async function regenerateDraft(
+	id: number,
+	platform: string,
+	postType: string,
+): Promise<SavedDraft> {
+	const res = await fetch(`${BASE}/drafts/${id}/regenerate`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ platform, post_type: postType }),
+	});
+	if (!res.ok) {
+		const err = await res.json().catch(() => ({}));
+		throw new Error(err.detail ?? 'Regenerate failed');
+	}
+	const data = await res.json();
+	return data.draft_output as SavedDraft;
 }
 
 export async function scheduleDraft(id: number, scheduledAt: Date): Promise<void> {
