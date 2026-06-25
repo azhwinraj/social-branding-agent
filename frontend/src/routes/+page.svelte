@@ -20,6 +20,7 @@
 	let error = $state<string | null>(null);
 	let runId = $state<string | null>(null);
 	let imageDescription = $state<string | null>(null);
+	let research = $state<'auto' | 'on' | 'off'>('auto');
 
 	function handleImageChange(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
@@ -47,7 +48,7 @@
 		error = null;
 		runId = null;
 		try {
-			const data = await generate(context, platforms, imageDescription ?? undefined);
+			const data = await generate(context, platforms, imageDescription ?? undefined, research);
 			drafts = data.drafts;
 			runId = data.run_id;
 		} catch (e) {
@@ -79,6 +80,19 @@
 		placeholder="What do you want to post about?"
 		rows={6}
 	></textarea>
+
+	<div class="row-controls">
+		<div class="control-group">
+			<span class="control-label">Research</span>
+			{#each ['auto', 'on', 'off'] as opt}
+				<button
+					class="seg-btn"
+					class:active={research === opt}
+					onclick={() => research = opt as 'auto' | 'on' | 'off'}
+				>{opt}</button>
+			{/each}
+		</div>
+	</div>
 
 	<label class="image-label">
 		<span>Attach image (optional)</span>
@@ -198,6 +212,20 @@
 		border-top: 1px solid #2a2a2a;
 	}
 	.run-id { font-family: monospace; }
+
+	.row-controls { display: flex; gap: 1.5rem; align-items: center; }
+	.control-group { display: flex; align-items: center; gap: 0.4rem; }
+	.control-label { font-size: 0.8rem; color: #6b7280; margin-right: 0.25rem; }
+	.seg-btn {
+		padding: 0.2rem 0.6rem;
+		background: #2a2a2a;
+		border: 1px solid #3a3a3a;
+		border-radius: 4px;
+		color: #a3a3a3;
+		font-size: 0.8rem;
+		cursor: pointer;
+	}
+	.seg-btn.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
 
 	.image-label {
 		display: flex;

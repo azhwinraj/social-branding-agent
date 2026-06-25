@@ -18,6 +18,10 @@ def _parse(text: str) -> bool:
 
 
 async def router(state: AgentState) -> dict:
+    # User override takes precedence over auto-detection
+    if state.research_override is not None:
+        return {"needs_research": state.research_override}
+
     messages = [
         {"role": "system", "content": load("router.md")},
         {"role": "user", "content": state.context_input},

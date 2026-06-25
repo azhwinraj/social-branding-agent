@@ -29,11 +29,17 @@ export async function generate(
 	context: string,
 	platforms: string[],
 	imageDescription?: string,
+	research: 'auto' | 'on' | 'off' = 'auto',
 ): Promise<{ drafts: Draft[]; run_id: string }> {
 	const res = await fetch(`${BASE}/generate`, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ context, platforms, image_description: imageDescription ?? null }),
+		body: JSON.stringify({
+			context,
+			platforms,
+			image_description: imageDescription ?? null,
+			research,
+		}),
 	});
 	if (!res.ok) throw new Error('Generate failed');
 	return res.json();
