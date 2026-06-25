@@ -62,3 +62,23 @@ export async function scheduleDraft(id: number, scheduledAt: Date): Promise<void
 	});
 	if (!res.ok) throw new Error('Schedule failed');
 }
+
+export interface Stats {
+	totals: {
+		calls: number;
+		prompt_tokens: number;
+		completion_tokens: number;
+		total_tokens: number;
+		cost_usd: number;
+	};
+	by_model: { model: string; calls: number; tokens: number; cost_usd: number }[];
+	by_node: { node: string; calls: number; tokens: number; cost_usd: number }[];
+	by_day: { date: string; calls: number; cost_usd: number; tokens: number }[];
+	drafts: Record<string, number>;
+}
+
+export async function getStats(): Promise<Stats> {
+	const res = await fetch(`${BASE}/stats`);
+	if (!res.ok) throw new Error('Failed to load stats');
+	return res.json();
+}

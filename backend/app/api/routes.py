@@ -4,9 +4,10 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.db.models import Draft, StyleExample
+from app.db.models import Draft, LlmCall, StyleExample
 from app.db.session import get_db
 from app.graph.builder import graph
 from app.graph.state import AgentState
@@ -117,3 +118,66 @@ async def schedule_draft_route(
     schedule_draft(draft_id, draft.platform, draft.content, req.scheduled_at)
 
     return {"status": "scheduled", "scheduled_at": req.scheduled_at.isoformat()}
+
+
+@router.get("/stats")
+async def get_stats(db: Session = Depends(get_db)):
+    # Overall LLM call totals
+    totals = db.query(
+        func.count(LlmCall.id).label("calls"),
+        func.coalesce(func.sum(LlmCall.prompt_tokens), 0).label("prompt_tokens"),
+        func.coalesce(func.sum(LlmCall.completion_tokens), 0).label("completion_tokens"),
+        func.coalesce(func.sum(LlmCall.cost_usd), 0.0).label("cost_usd"),
+    ).one()
+
+    # Breakdown by model
+    by_model = db.query(
+        LlmCall.model,
+        func.count(LlmCall.id).label("calls"),
+        func.coalesce(func.sum(LlmCall.prompt_tokens + LlmCall.completion_tokens), 0).label("tokens"),
+        func.coalesce(func.sum(LlmCall.cost_usd), 0.0).label("cost_usd"),
+    ).group_by(LlmCall.model).order_by(func.sum(LlmCall.cost_usd).desc()).all()
+
+    # Breakdown by node
+    by_node = db.query(
+        LlmCall.node,
+        func.count(LlmCall.id).label("calls"),
+        func.coalesce(func.sum(LlmCall.prompt_tokens + LlmCall.completion_tokens), 0).label("tokens"),
+        func.coalesce(func.sum(LlmCall.cost_usd), 0.0).label("cost_usd"),
+    ).group_by(LlmCall.node).order_by(func.count(LlmCall.id).desc()).all()
+
+    # Cost by day (SQLite strftime)
+    by_day = db.query(
+        func.strftime("%Y-%m-%d", LlmCall.created_at).label("date"),
+        func.count(LlmCall.id).label("calls"),
+        func.coalesce(func.sum(LlmCall.cost_usd), 0.0).label("cost_usd"),
+        func.coalesce(func.sum(LlmCall.prompt_tokens + LlmCall.completion_tokens), 0).label("tokens"),
+    ).group_by("date").order_by("date").all()
+
+    # Draft counts
+    draft_totals = db.query(
+        Draft.status, func.count(Draft.id).label("count")
+    ).group_by(Draft.status).all()
+
+    return {
+        "totals": {
+            "calls": totals.calls,
+            "prompt_tokens": totals.prompt_tokens,
+            "completion_tokens": totals.completion_tokens,
+            "total_tokens": totals.prompt_tokens + totals.completion_tokens,
+            "cost_usd": totals.cost_usd,
+        },
+        "by_model": [
+            {"model": r.model, "calls": r.calls, "tokens": r.tokens, "cost_usd": r.cost_usd}
+            for r in by_model
+        ],
+        "by_node": [
+            {"node": r.node, "calls": r.calls, "tokens": r.tokens, "cost_usd": r.cost_usd}
+            for r in by_node
+        ],
+        "by_day": [
+            {"date": r.date, "calls": r.calls, "cost_usd": r.cost_usd, "tokens": r.tokens}
+            for r in by_day
+        ],
+        "drafts": {r.status: r.count for r in draft_totals},
+    }
