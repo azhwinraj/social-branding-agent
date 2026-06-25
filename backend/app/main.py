@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.routes import router
+from app.api.refine import router as refine_router
 from app.db.session import engine, SessionLocal
 from app.db.models import Base
 from app.scheduler.jobs import scheduler, reload_pending
@@ -49,3 +50,4 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(refine_router, prefix="/api")
