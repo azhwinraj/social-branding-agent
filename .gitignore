@@ -49,6 +49,9 @@ Thumbs.db
 *.log
 logs/
 
+# Planning / design docs (not part of the shipped codebase)
+docs/
+
 # Bench outputs (keep BENCHMARKS.md, drop intermediate)
 bench/results/
 !bench/results/.gitkeep
