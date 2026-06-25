@@ -55,7 +55,12 @@ async def generate(req: GenerateRequest):
         research_override=research_override,
     )
     result = await graph.ainvoke(state)
-    return {"drafts": result.get("drafts", []), "run_id": run_id}
+    return {
+        "drafts": result.get("drafts", []),
+        "run_id": run_id,
+        "post_types": result.get("post_types", {}),
+        "router_reasoning": result.get("router_reasoning", ""),
+    }
 
 
 @router.get("/drafts")

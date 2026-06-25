@@ -47,7 +47,7 @@ async def call(
     tiers = CASCADES[cascade_key][mode]
     last_error: Exception | None = None
 
-    for model in tiers:
+    for tier_index, model in enumerate(tiers):
         try:
             resp = await litellm.acompletion(model=model, messages=messages)
             content: str = resp.choices[0].message.content or ""
@@ -70,6 +70,7 @@ async def call(
 
             return content, {
                 "model": model,
+                "tier": tier_index,
                 "prompt_tokens": usage.prompt_tokens,
                 "completion_tokens": usage.completion_tokens,
                 "cost_usd": cost,
