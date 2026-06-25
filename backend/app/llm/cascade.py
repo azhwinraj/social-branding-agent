@@ -43,11 +43,19 @@ async def call(
     run_id: str,
     db: Session,
     mode: str = "balanced",
+    start_tier: int = 0,
 ) -> tuple[str, dict]:
+    """Call the cascade for this node/key.
+
+    start_tier: skip all tiers with index < start_tier so refinements
+    inherit the original draft's tier without escalating.
+    """
     tiers = CASCADES[cascade_key][mode]
     last_error: Exception | None = None
 
     for tier_index, model in enumerate(tiers):
+        if tier_index < start_tier:
+            continue
         try:
             resp = await litellm.acompletion(model=model, messages=messages)
             content: str = resp.choices[0].message.content or ""
