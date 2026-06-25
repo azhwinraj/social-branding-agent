@@ -8,10 +8,13 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.models import Draft, LlmCall, StyleExample
-from app.db.session import get_db
+from app.db.session import SessionLocal, get_db
 from app.graph.builder import graph
 from app.graph.state import AgentState
+from app.llm.cascade import call
 from app.llm.embed import embed
+from app.llm.post_types import ALLOWED_TYPES
+from app.llm.prompts import load
 from app.scheduler.jobs import schedule_draft
 
 router = APIRouter()
@@ -23,6 +26,11 @@ class GenerateRequest(BaseModel):
     image_description: str | None = None
     research: str = "auto"   # "auto" | "on" | "off"
     mode: str = "balanced"   # "fast" | "balanced" | "polish"
+
+
+class RegenerateRequest(BaseModel):
+    platform: str
+    post_type: str
 
 
 class ScheduleRequest(BaseModel):
@@ -70,12 +78,14 @@ async def list_drafts(db: Session = Depends(get_db)):
         {
             "id": r.id,
             "platform": r.platform,
+            "post_type": r.post_type,
             "content": r.content,
             "context_input": r.context_input,
             "status": r.status,
             "total_cost_usd": r.total_cost_usd,
             "created_at": r.created_at.isoformat(),
             "scheduled_at": r.scheduled_at.isoformat() if r.scheduled_at else None,
+            "post_types_json": r.post_types_json,
         }
         for r in rows
     ]
@@ -107,6 +117,79 @@ async def approve_draft(draft_id: int, db: Session = Depends(get_db)):
 
     db.commit()
     return {"status": "approved", "id": draft_id, "embedding": example.embedding is not None}
+
+
+@router.post("/drafts/{draft_id}/regenerate")
+async def regenerate_draft(draft_id: int, req: RegenerateRequest, db: Session = Depends(get_db)):
+    """Regenerate a single platform draft with a different post type.
+
+    Does NOT re-run the router, research, or style memory. Reuses the
+    existing context_input and updates the draft row in place.
+    """
+    if req.platform not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unknown platform: {req.platform!r}")
+    if req.post_type not in ALLOWED_TYPES[req.platform]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown post_type {req.post_type!r} for platform {req.platform!r}. "
+                   f"Allowed: {ALLOWED_TYPES[req.platform]}",
+        )
+
+    draft = db.query(Draft).filter(Draft.id == draft_id).first()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found")
+    if draft.platform != req.platform:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Draft {draft_id} is a {draft.platform!r} draft, not {req.platform!r}.",
+        )
+
+    messages = [
+        {"role": "system", "content": load(f"{req.platform}/{req.post_type}.md")},
+        {"role": "user", "content": draft.context_input},
+    ]
+    run_id = str(uuid.uuid4())
+    with SessionLocal() as llm_db:
+        content, meta = await call(
+            f"{req.platform}_regen", req.platform, messages, run_id, llm_db
+        )
+
+    # Update the draft row in place; reset approval / schedule state.
+    draft.content = content
+    draft.post_type = req.post_type
+    draft.model_tier = meta.get("tier")
+    draft.total_cost_usd = meta.get("cost_usd", 0.0)
+    draft.status = "pending"
+    draft.approved_at = None
+    draft.scheduled_at = None
+
+    # Keep post_types_json in sync for the changed platform.
+    existing_types: dict = {}
+    if draft.post_types_json:
+        try:
+            existing_types = json.loads(draft.post_types_json)
+        except (json.JSONDecodeError, ValueError):
+            pass
+    existing_types[req.platform] = req.post_type
+    draft.post_types_json = json.dumps(existing_types)
+
+    db.commit()
+
+    return {
+        "draft_output": {
+            "id": draft.id,
+            "platform": draft.platform,
+            "post_type": draft.post_type,
+            "content": draft.content,
+            "context_input": draft.context_input,
+            "status": draft.status,
+            "total_cost_usd": draft.total_cost_usd,
+            "created_at": draft.created_at.isoformat(),
+            "scheduled_at": None,
+            "model": meta.get("model", ""),
+            "post_types_json": draft.post_types_json,
+        }
+    }
 
 
 @router.post("/drafts/{draft_id}/schedule")
