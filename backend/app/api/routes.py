@@ -94,6 +94,7 @@ async def approve_draft(draft_id: int, db: Session = Depends(get_db)):
         draft_id=draft.id,
         platform=draft.platform,
         content=draft.content,
+        post_type=draft.post_type,
     )
     db.add(example)
     db.flush()
