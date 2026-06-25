@@ -1,0 +1,7 @@
+{
+  "id": "input_01",
+  "description": "Personal launch post — no research needed",
+  "context": "Just shipped a 3-tier LLM cascade that auto-routes to free Groq models and only falls back to Claude when needed. Total cost per run is under $0.001 even in polish mode.",
+  "platform": "linkedin",
+  "expected_research": false
+}

@@ -1,0 +1,7 @@
+{
+  "id": "input_03",
+  "description": "Lesson learned post — no research needed",
+  "context": "Spent 3 days debugging a race condition in our async LangGraph pipeline. The fix was 2 lines. The lesson: asyncio.gather is not a lock. If your parallel nodes write to the same key, the last writer wins and you will lose data silently.",
+  "platform": "linkedin",
+  "expected_research": false
+}

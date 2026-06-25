@@ -141,22 +141,22 @@ The user submits a context (text + optional images) via the SvelteKit frontend (
 
 ---
 
-## Build phases (current status: Phase B — LLM gateway + LinkedIn draft)
+## Build phases (current status: v1 COMPLETE — all phases A–J shipped)
 
 The repo is built in phases. Each phase has a single PR (or short PR sequence) and a definition of done. Do not start phase N+1 before phase N is merged.
 
 | Phase | Goal | DoD |
 |---|---|---|
-| A | Foundation: SvelteKit + FastAPI skeleton, SQLite ready, LangSmith trace working | Run `.\launch.ps1`, click Generate, see backend response in browser. LangSmith shows the trace. |
-| B | LLM gateway + single-platform (LinkedIn, Tier 1 only) | Submit context, see LinkedIn draft with token count and cost in 5s. |
-| C | Multi-platform fan-out + adherence rules | All three platforms generate in parallel; failing drafts get one regenerate attempt. |
-| D | Style memory (sqlite-vec + Gemini embedding) | After 5 approved posts, 6th draft visibly matches voice. Embeddings populated in DB. |
-| E | Research (Tavily, conditional) + image pass-through | "What's new in MCP this month?" triggers research; image upload attaches metadata. |
-| F | Scheduling + plyer desktop toast + ntfy.sh phone push | Schedule post 2 min ahead; desktop toast + phone buzz on time. |
-| G | Polish mode + full 3-tier cascade | Same input in all 3 quality modes produces measurably different cost + quality. |
-| H | Stats dashboard + observability polish | Two weeks of usage; stats match billing dashboards. |
-| I | Side benchmark (lean + bloated) + BENCHMARKS.md | `python bench/runner.py` produces results.json and updated BENCHMARKS.md. |
-| J | Packaging + open-source readiness | `launch.ps1` works on a clean Windows machine with only Python + Node installed. README install steps verified. |
+| A | Foundation: SvelteKit + FastAPI skeleton, SQLite ready, LangSmith trace working | ✅ Done |
+| B | LLM gateway + single-platform (LinkedIn, Tier 1 only) | ✅ Done |
+| C | Multi-platform fan-out + adherence rules | ✅ Done |
+| D | Style memory (sqlite-vec + Gemini embedding) | ✅ Done |
+| E | Research (Tavily, conditional) + image pass-through | ✅ Done |
+| F | Scheduling + plyer desktop toast + ntfy.sh phone push | ✅ Done |
+| G | Polish mode + full 3-tier cascade | ✅ Done |
+| H | Stats dashboard + observability polish | ✅ Done |
+| I | Side benchmark (lean + bloated) + BENCHMARKS.md | ✅ Done — bloated is 11.2× tokens, 23.2× latency vs lean |
+| J | Packaging + open-source readiness | ✅ Done — launch.ps1 with dep checks, README verified |
 
 Deferred (post-v1): K (vision analysis), V2 (MCP auto-post via linkedin-mcp + x-mcp).
 

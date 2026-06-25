@@ -1,0 +1,7 @@
+{
+  "id": "input_02",
+  "description": "Opinion piece — no research needed",
+  "context": "Most AI agents fail not because the models are bad but because developers add too many layers. A router, a generator, and a validator is all you need. Every extra agent is a tax on latency and cost.",
+  "platform": "linkedin",
+  "expected_research": false
+}
