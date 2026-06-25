@@ -10,6 +10,14 @@ from app.db.models import Base
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Set provider API keys before any LiteLLM call
+    if settings.groq_api_key:
+        os.environ["GROQ_API_KEY"] = settings.groq_api_key
+    if settings.anthropic_api_key:
+        os.environ["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
+    if settings.gemini_api_key:
+        os.environ["GEMINI_API_KEY"] = settings.gemini_api_key
+
     # Set LangSmith env vars before anything imports langchain internals
     if settings.langchain_api_key:
         os.environ["LANGCHAIN_API_KEY"] = settings.langchain_api_key
@@ -26,7 +34,7 @@ app = FastAPI(title="Social Branding Agent", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "tauri://localhost"],
+    allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -2,11 +2,22 @@
 	import { healthCheck, generate } from '$lib/api';
 	import { onMount } from 'svelte';
 
+	interface Draft {
+		platform: string;
+		content: string;
+		model: string;
+		prompt_tokens: number;
+		completion_tokens: number;
+		cost_usd: number;
+	}
+
 	let backendStatus = $state<'checking' | 'ok' | 'error'>('checking');
 	let context = $state('');
 	let platforms = $state(['linkedin', 'x', 'medium']);
 	let loading = $state(false);
-	let result = $state<string | null>(null);
+	let drafts = $state<Draft[]>([]);
+	let error = $state<string | null>(null);
+	let runId = $state<string | null>(null);
 
 	onMount(async () => {
 		try {
@@ -20,15 +31,26 @@
 	async function handleGenerate() {
 		if (!context.trim()) return;
 		loading = true;
-		result = null;
+		drafts = [];
+		error = null;
+		runId = null;
 		try {
 			const data = await generate(context, platforms);
-			result = `Run ID: ${data.run_id || 'n/a'} — ${data.drafts.length} drafts generated (stubs for now)`;
+			drafts = data.drafts;
+			runId = data.run_id;
 		} catch (e) {
-			result = 'Error: ' + (e as Error).message;
+			error = (e as Error).message;
 		} finally {
 			loading = false;
 		}
+	}
+
+	function totalCost(ds: Draft[]) {
+		return ds.reduce((s, d) => s + d.cost_usd, 0);
+	}
+
+	function totalTokens(ds: Draft[]) {
+		return ds.reduce((s, d) => s + d.prompt_tokens + d.completion_tokens, 0);
 	}
 </script>
 
@@ -69,8 +91,29 @@
 		{loading ? 'Generating...' : 'Generate Drafts'}
 	</button>
 
-	{#if result}
-		<div class="result">{result}</div>
+	{#if error}
+		<div class="error-box">{error}</div>
+	{/if}
+
+	{#if drafts.length > 0}
+		<div class="meta-row">
+			<span>{drafts.length} draft{drafts.length > 1 ? 's' : ''}</span>
+			<span>{totalTokens(drafts).toLocaleString()} tokens</span>
+			<span>${totalCost(drafts).toFixed(6)}</span>
+			{#if runId}<span class="run-id">run: {runId.slice(0, 8)}</span>{/if}
+		</div>
+
+		{#each drafts as draft}
+			<div class="draft-card">
+				<div class="draft-header">
+					<span class="platform">{draft.platform}</span>
+					<span class="draft-meta">
+						{draft.prompt_tokens + draft.completion_tokens} tokens · ${draft.cost_usd.toFixed(6)} · {draft.model.split('/').pop()}
+					</span>
+				</div>
+				<pre class="draft-content">{draft.content}</pre>
+			</div>
+		{/each}
 	{/if}
 </div>
 
@@ -100,6 +143,7 @@
 		color: #e5e5e5;
 		font-size: 0.95rem;
 		resize: vertical;
+		box-sizing: border-box;
 	}
 
 	.platforms { display: flex; gap: 1.5rem; }
@@ -118,12 +162,61 @@
 	button:disabled { opacity: 0.5; cursor: not-allowed; }
 	button:hover:not(:disabled) { background: #2563eb; }
 
-	.result {
+	.error-box {
 		padding: 0.75rem;
+		background: #2a1a1a;
+		border: 1px solid #7f1d1d;
+		border-radius: 6px;
+		color: #f87171;
+		font-size: 0.875rem;
+	}
+
+	.meta-row {
+		display: flex;
+		gap: 1.25rem;
+		font-size: 0.8rem;
+		color: #a3a3a3;
+		padding: 0.5rem 0;
+		border-top: 1px solid #2a2a2a;
+	}
+	.run-id { font-family: monospace; }
+
+	.draft-card {
 		background: #1a1a1a;
 		border: 1px solid #2a2a2a;
-		border-radius: 6px;
-		font-size: 0.875rem;
-		color: #a3a3a3;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+
+	.draft-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0.6rem 1rem;
+		background: #222;
+		border-bottom: 1px solid #2a2a2a;
+	}
+
+	.platform {
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #60a5fa;
+	}
+
+	.draft-meta {
+		font-size: 0.75rem;
+		color: #6b7280;
+	}
+
+	.draft-content {
+		padding: 1rem;
+		margin: 0;
+		white-space: pre-wrap;
+		font-family: inherit;
+		font-size: 0.9rem;
+		line-height: 1.6;
+		color: #e5e5e5;
 	}
 </style>
