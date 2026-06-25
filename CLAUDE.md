@@ -92,7 +92,7 @@ See `docs/ARCHITECTURE.md` for the full system diagram.
 
 ## How the agent works (one paragraph)
 
-The user submits a context (text + optional images) via the SvelteKit frontend (http://localhost:5173). FastAPI invokes a LangGraph state machine. A router node (Llama 3.1 8B on Groq free tier) decides which platforms to target and whether research is needed. If research is needed, the Tavily node runs. A style-memory node embeds the context via Gemini embedding-001 and retrieves the top-3 most similar past approved posts per platform from sqlite-vec. Three platform generator nodes (LinkedIn / X / Medium) run in parallel — each uses a 3-tier model cascade (free → free → Claude failsafe). An adherence validator runs platform-specific rules and regenerates once on failure. The aggregator persists drafts with full cost/token telemetry and surfaces them in the UI for human approval. Approved drafts can be scheduled; APScheduler triggers a plyer desktop toast + ntfy.sh phone notification at the scheduled time.
+The user submits a context (text + optional images) via the SvelteKit frontend (http://localhost:5173). FastAPI invokes a LangGraph state machine. A router node (Llama 3.1 8B on Groq free tier) decides which platforms to target and whether research is needed. The router also classifies the post type per selected platform (one of 6 LinkedIn / 5 X / 4 Medium types — see `backend/app/llm/post_types.py`). This drives both the system prompt selection in generators and the style-memory retrieval filter. If research is needed, the Tavily node runs. A style-memory node embeds the context via Gemini embedding-001 and retrieves the top-3 most similar past approved posts per platform from sqlite-vec. Three platform generator nodes (LinkedIn / X / Medium) run in parallel — each uses a 3-tier model cascade (free → free → Claude failsafe). An adherence validator runs platform-specific rules and regenerates once on failure. The aggregator persists drafts with full cost/token telemetry and surfaces them in the UI for human approval. Approved drafts can be scheduled; APScheduler triggers a plyer desktop toast + ntfy.sh phone notification at the scheduled time.
 
 ---
 
@@ -127,6 +127,20 @@ The user submits a context (text + optional images) via the SvelteKit frontend (
 - All LLM calls use `litellm.acompletion(...)`, not `completion(...)`.
 - The parallel fan-out uses `asyncio.gather(...)` inside the LangGraph node, NOT LangGraph's `Send` API (we want a flat parallel structure, not nested supervisors).
 
+### Post types and prompt selection
+
+- Every (platform, post_type) combination has a dedicated system prompt at `backend/app/llm/prompts/<platform>/<post_type>.md`. Generators load the prompt from this path; do not concatenate or inline prompts in code.
+- Style memory retrieval is filtered by (platform, post_type), not platform alone. Cold-start fallback path is documented in `style_memory.py`.
+- Adding a new post type requires: (a) add to `ALLOWED_TYPES` in `post_types.py`, (b) create the prompt file at the correct path, (c) update the router's allowed-types list in its prompt, (d) add any type-specific adherence rules in `by_type.py`. All four are required — partial additions will silently misbehave.
+
+### Refinement loop
+
+- Refinements run through `backend/app/graph/refinement.py`, a separate subgraph from the main generation flow.
+- A refinement inherits the model tier of the draft being refined. Do not escalate or downgrade — voice consistency depends on this.
+- Revisions are versioned in `draft_revisions`. Exactly one revision per draft has `is_current=true`. `drafts.content` is the denormalized current revision content; update both in one transaction.
+- Reverting is a flag swap, not an LLM call. It costs nothing and creates no new revision.
+- Approval saves only the current revision's content to style memory (embeddings). Older revisions remain in history but are not embedded.
+
 ---
 
 ## What NOT to do
@@ -140,6 +154,10 @@ The user submits a context (text + optional images) via the SvelteKit frontend (
 - **Do not** add Tamil/Hindi translation in v1. It was evaluated and explicitly dropped — X engagement data does not support it for AI/tech content.
 - **Do not** auto-post in v1. Drafts → human approval → reminder → user posts manually. Auto-posting is v2 via MCP servers.
 - **Do not** put secrets in CLAUDE.md, prompts, or chat. Use `.env` only.
+- **Do not** add a new post type without creating the matching prompt file. The generator will crash on `FileNotFoundError`.
+- **Do not** upgrade or downgrade the model tier inside the refinement subgraph. Refinements inherit the original tier — period.
+- **Do not** delete revisions when refining. Always append a new row and flip `is_current`. The history strip depends on full history.
+- **Do not** include refinement instructions in the embedded content saved to style memory. Embed only the revision content, not the meta-history.
 
 ---
 
