@@ -3,21 +3,74 @@
 	import { ModeWatcher, mode, toggleMode } from "mode-watcher";
 	import { page } from "$app/state";
 	import { browser } from "$app/environment";
+	import { onNavigate } from "$app/navigation";
 	import { cn } from "$lib/utils.js";
+	import CommandPalette from "$lib/components/CommandPalette.svelte";
 	import Moon from "@lucide/svelte/icons/moon";
 	import Sun from "@lucide/svelte/icons/sun";
 	import Settings from "@lucide/svelte/icons/settings";
 
 	let { children } = $props();
 
-	// Bridge mode-watcher's class-based mode → our data-theme attribute.
-	// The static data-theme="dark" in app.html covers SSR; this takes over on hydration.
+	// ── Theme bridge ───────────────────────────────────────────────
+	// mode-watcher's `mode` is { readonly current: ... }, not a store.
+	// Bridge to our data-theme attribute for OKLCH token switching.
 	$effect(() => {
 		if (browser) {
 			document.documentElement.setAttribute("data-theme", mode.current ?? "dark");
 		}
 	});
 
+	// ── Command palette ────────────────────────────────────────────
+	let commandOpen = $state(false);
+
+	// ── Keyboard shortcuts ─────────────────────────────────────────
+	// ⌘K / Ctrl+K → palette  ⌘D → theme  ⌘1-5 → nav
+	const NAV_HREFS = ["/", "/drafts", "/queue", "/history", "/stats"];
+
+	function handleKeydown(e: KeyboardEvent) {
+		const mod = e.metaKey || e.ctrlKey;
+		if (!mod) return;
+
+		switch (e.key) {
+			case "k":
+			case "K":
+				e.preventDefault();
+				commandOpen = !commandOpen;
+				break;
+			case "d":
+			case "D":
+				e.preventDefault();
+				toggleMode();
+				break;
+			case "1":
+			case "2":
+			case "3":
+			case "4":
+			case "5": {
+				const idx = parseInt(e.key) - 1;
+				const href = NAV_HREFS[idx];
+				if (href) {
+					e.preventDefault();
+					import("$app/navigation").then((m) => m.goto(href));
+				}
+				break;
+			}
+		}
+	}
+
+	// ── View transitions (Chrome 111+, progressive enhancement) ──
+	onNavigate((navigation) => {
+		if (!document.startViewTransition) return;
+		return new Promise<void>((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
+	});
+
+	// ── Nav helpers ────────────────────────────────────────────────
 	const navLinks = [
 		{ href: "/", label: "Compose" },
 		{ href: "/drafts", label: "Drafts" },
@@ -32,7 +85,10 @@
 	}
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
+
 <ModeWatcher defaultMode="dark" />
+<CommandPalette bind:open={commandOpen} />
 
 <div class="min-h-screen bg-background text-foreground">
 	<!-- ─── Sticky nav ─────────────────────────────────────────── -->
@@ -43,9 +99,8 @@
 			<!-- Logo -->
 			<a
 				href="/"
-				class="flex shrink-0 items-center gap-2.5 text-sm font-medium text-foreground"
+				class="flex shrink-0 items-center gap-2.5 text-sm font-medium text-foreground transition-opacity hover:opacity-80"
 			>
-				<!-- Diamond mark in primary (electric violet) -->
 				<div class="size-[18px] rotate-45 rounded-[3px] bg-primary"></div>
 				Social Branding Agent
 			</a>
@@ -56,7 +111,7 @@
 					<a
 						href={link.href}
 						class={cn(
-							"rounded-md px-3 py-1.5 text-sm transition-colors",
+							"rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
 							isActive(link.href)
 								? "bg-[var(--primary-soft)] font-medium text-primary"
 								: "text-[var(--foreground-muted)] hover:bg-[var(--background-overlay)] hover:text-foreground"
@@ -69,20 +124,22 @@
 
 			<!-- Right cluster -->
 			<div class="ml-auto flex items-center gap-1">
-				<!-- ⌘K trigger — command palette wired in PR #5 -->
+				<!-- ⌘K trigger -->
 				<button
-					class="flex h-7 items-center gap-1.5 rounded-md border border-[var(--border)] px-2.5 text-xs text-[var(--foreground-subtle)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground-muted)]"
+					onclick={() => (commandOpen = true)}
+					class="flex h-7 items-center gap-1.5 rounded-md border border-[var(--border)] px-2.5 text-xs text-[var(--foreground-subtle)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 					aria-label="Open command palette (⌘K)"
 				>
 					<span>Search</span>
 					<kbd class="font-mono text-[10px] opacity-60">⌘K</kbd>
 				</button>
 
-				<!-- Theme toggle -->
+				<!-- Theme toggle ⌘D -->
 				<button
 					onclick={toggleMode}
-					class="flex size-8 items-center justify-center rounded-md text-[var(--foreground-muted)] transition-colors hover:bg-[var(--background-overlay)] hover:text-foreground"
-					aria-label="Toggle theme"
+					class="flex size-8 items-center justify-center rounded-md text-[var(--foreground-muted)] transition-colors hover:bg-[var(--background-overlay)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+					aria-label="Toggle theme (⌘D)"
+					title="Toggle theme (⌘D)"
 				>
 					{#if mode.current === "dark"}
 						<Moon class="size-4" />
@@ -91,9 +148,9 @@
 					{/if}
 				</button>
 
-				<!-- Settings (placeholder for future settings page) -->
+				<!-- Settings stub -->
 				<button
-					class="flex size-8 items-center justify-center rounded-md text-[var(--foreground-muted)] transition-colors hover:bg-[var(--background-overlay)] hover:text-foreground"
+					class="flex size-8 items-center justify-center rounded-md text-[var(--foreground-muted)] transition-colors hover:bg-[var(--background-overlay)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
 					aria-label="Settings"
 				>
 					<Settings class="size-4" />
@@ -101,7 +158,7 @@
 
 				<!-- User avatar initials -->
 				<div
-					class="flex size-7 items-center justify-center rounded-full bg-[var(--background-overlay)] text-[11px] font-medium text-[var(--foreground-muted)] select-none"
+					class="flex size-7 select-none items-center justify-center rounded-full bg-[var(--background-overlay)] text-[11px] font-medium text-[var(--foreground-muted)]"
 				>
 					AR
 				</div>
