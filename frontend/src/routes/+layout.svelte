@@ -7,15 +7,31 @@
 	import Moon from "@lucide/svelte/icons/moon";
 	import Sun from "@lucide/svelte/icons/sun";
 	import Settings from "@lucide/svelte/icons/settings";
+	import CommandPalette from "$lib/components/CommandPalette.svelte";
 
 	let { children } = $props();
+
+	let commandOpen = $state(false);
 
 	// Bridge mode-watcher's class-based mode → our data-theme attribute.
 	// The static data-theme="dark" in app.html covers SSR; this takes over on hydration.
 	$effect(() => {
 		if (browser) {
-			document.documentElement.setAttribute("data-theme", $mode ?? "dark");
+			document.documentElement.setAttribute("data-theme", mode.current ?? "dark");
 		}
+	});
+
+	// Global ⌘K / Ctrl+K listener
+	$effect(() => {
+		if (!browser) return;
+		function handleKeydown(e: KeyboardEvent) {
+			if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+				e.preventDefault();
+				commandOpen = !commandOpen;
+			}
+		}
+		window.addEventListener("keydown", handleKeydown);
+		return () => window.removeEventListener("keydown", handleKeydown);
 	});
 
 	const navLinks = [
@@ -33,6 +49,7 @@
 </script>
 
 <ModeWatcher defaultMode="dark" />
+<CommandPalette bind:open={commandOpen} />
 
 <div class="min-h-screen bg-background text-foreground">
 	<!-- ─── Sticky nav ─────────────────────────────────────────── -->
@@ -69,8 +86,9 @@
 
 			<!-- Right cluster -->
 			<div class="ml-auto flex items-center gap-1">
-				<!-- ⌘K trigger — command palette wired in PR #5 -->
+				<!-- ⌘K trigger -->
 				<button
+					onclick={() => (commandOpen = true)}
 					class="flex h-7 items-center gap-1.5 rounded-md border border-[var(--border)] px-2.5 text-xs text-[var(--foreground-subtle)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground-muted)]"
 					aria-label="Open command palette (⌘K)"
 				>
@@ -84,7 +102,7 @@
 					class="flex size-8 items-center justify-center rounded-md text-[var(--foreground-muted)] transition-colors hover:bg-[var(--background-overlay)] hover:text-foreground"
 					aria-label="Toggle theme"
 				>
-					{#if $mode === "dark"}
+					{#if mode.current === "dark"}
 						<Moon class="size-4" />
 					{:else}
 						<Sun class="size-4" />
