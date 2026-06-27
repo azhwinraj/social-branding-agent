@@ -14,7 +14,7 @@
 	// The static data-theme="dark" in app.html covers SSR; this takes over on hydration.
 	$effect(() => {
 		if (browser) {
-			document.documentElement.setAttribute("data-theme", $mode ?? "dark");
+			document.documentElement.setAttribute("data-theme", mode.current ?? "dark");
 		}
 	});
 
@@ -84,7 +84,7 @@
 					class="flex size-8 items-center justify-center rounded-md text-[var(--foreground-muted)] transition-colors hover:bg-[var(--background-overlay)] hover:text-foreground"
 					aria-label="Toggle theme"
 				>
-					{#if $mode === "dark"}
+					{#if mode.current === "dark"}
 						<Moon class="size-4" />
 					{:else}
 						<Sun class="size-4" />
