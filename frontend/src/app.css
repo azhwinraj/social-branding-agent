@@ -137,3 +137,43 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  body {
+    transition: none !important;
+  }
+}
+
+/* ── View transitions (Chrome 111+, progressive enhancement) ────── */
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+@keyframes fade-out {
+  to { opacity: 0; }
+}
+@keyframes slide-from-right {
+  from { transform: translateX(8px); opacity: 0; }
+}
+@keyframes slide-to-left {
+  to { transform: translateX(-8px); opacity: 0; }
+}
+
+::view-transition-old(root) {
+  animation: 150ms ease-out both fade-out, 150ms ease-out both slide-to-left;
+}
+::view-transition-new(root) {
+  animation: 200ms ease-out both fade-in, 200ms ease-out both slide-from-right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}

@@ -9,6 +9,7 @@
 		type Revision,
 	} from "$lib/api.js";
 	import { onMount } from "svelte";
+	import { fly } from "svelte/transition";
 	import { cn, snakeCaseToTitleCase } from "$lib/utils.js";
 	import PlatformBadge from "$lib/components/PlatformBadge.svelte";
 	import SchedulePopover from "$lib/components/SchedulePopover.svelte";
@@ -262,6 +263,7 @@
 			{@const isBusy = regenerating[draft.id] || refining[draft.id] || approving[draft.id]}
 
 			<div
+				transition:fly={{ y: 8, duration: 200, opacity: 0 }}
 				class={cn(
 					"rounded-xl border bg-[var(--background-elevated)] overflow-hidden transition-colors",
 					draft.status === "approved" && "border-[var(--success)]/40",

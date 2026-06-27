@@ -9,7 +9,7 @@ This is the file Claude Code reads at the start of every session. It is the sour
 ## Stack at a glance
 
 - **Launcher:** `launch.bat` (Windows) / `launch.sh` (Mac/Linux) — starts both servers, opens browser
-- **Frontend:** SvelteKit 2.x + TypeScript
+- **Frontend:** SvelteKit 2.x + TypeScript + Tailwind CSS v4 + shadcn-svelte + LayerChart
 - **Backend:** FastAPI (Python 3.12)
 - **Orchestration:** LangGraph 1.0
 - **LLM gateway:** LiteLLM
@@ -141,6 +141,21 @@ The user submits a context (text + optional images) via the SvelteKit frontend (
 - Reverting is a flag swap, not an LLM call. It costs nothing and creates no new revision.
 - Approval saves only the current revision's content to style memory (embeddings). Older revisions remain in history but are not embedded.
 
+### UI conventions
+
+- **Design tokens:** All colors via OKLCH CSS custom properties in `app.css`. Two themes (`data-theme="dark|light"`). Never hardcode hex colors in components.
+- **Typography:** Geist Sans for UI, Geist Mono for code/numerics. Never import additional fonts.
+- **Iconography:** `@lucide/svelte` exclusively. If a needed icon isn't in Lucide, raise the question — don't import a second icon pack.
+- **Components:** Build all UI from shadcn-svelte primitives. If you need a primitive that isn't installed, install it via the shadcn-svelte CLI; do not rebuild from scratch.
+- **Charts:** LayerChart preferred, but high-level components (`AreaChart`, `PieChart`, etc.) live in `layerchart/dist/components/charts/`, not the root export. Pure SVG is acceptable for simple one-off charts to avoid import complexity.
+- **Platform identity comes from icons, not filled badge colors.** Badges have neutral backgrounds; brand color appears in the icon only.
+- **Type identity comes from text labels, not colors.** No type-specific color coding.
+- **No motion over 400ms.** No decorative animation. Respect `prefers-reduced-motion` (handled globally in `app.css`).
+- **Empty states are required.** Every list/grid has a designed empty state. No bare "no data" messages.
+- **Loading states use skeletons, not spinners** — except for short (<500ms) operations where a spinner is acceptable.
+- **Keyboard shortcuts:** ⌘K opens command palette, ⌘D toggles theme, ⌘1–5 navigate to the five main pages. All wired in `+layout.svelte`. Do not add per-page shortcut handlers for these — the layout already handles them.
+- **View transitions:** `onNavigate` in `+layout.svelte` uses the native View Transitions API (Chrome 111+). No JavaScript animation library is needed for page-to-page transitions.
+
 ---
 
 ## What NOT to do
@@ -158,6 +173,12 @@ The user submits a context (text + optional images) via the SvelteKit frontend (
 - **Do not** upgrade or downgrade the model tier inside the refinement subgraph. Refinements inherit the original tier — period.
 - **Do not** delete revisions when refining. Always append a new row and flip `is_current`. The history strip depends on full history.
 - **Do not** include refinement instructions in the embedded content saved to style memory. Embed only the revision content, not the meta-history.
+- **Do not** add new icon packs alongside `@lucide/svelte`. One source of truth.
+- **Do not** introduce CSS-in-JS or scoped styles for theming. Tailwind utilities + design tokens only.
+- **Do not** color-code platforms or post types with semantic tokens (success, warning, danger). Those are reserved for system states.
+- **Do not** add new chart libraries alongside LayerChart.
+- **Do not** rebuild a primitive that shadcn-svelte provides. Install it via CLI; customize via Tailwind.
+- **Do not** ship motion that the user did not directly initiate. Decorative animation costs trust.
 
 ---
 
