@@ -12,12 +12,29 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
 	},
 	"devDependencies": {
+		"@internationalized/date": "^3.12.2",
+		"@lucide/svelte": "^1.21.0",
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@tailwindcss/vite": "^4.3.1",
+		"mode-watcher": "^1.1.0",
 		"svelte": "^5.56.1",
 		"svelte-check": "^4.6.0",
+		"svelte-sonner": "^1.1.1",
+		"tailwind-variants": "^3.2.2",
+		"tailwindcss": "^4.3.1",
 		"typescript": "^6.0.3",
 		"vite": "^8.0.16"
+	},
+	"dependencies": {
+		"@fontsource-variable/geist": "^5.2.9",
+		"@fontsource-variable/geist-mono": "^5.2.8",
+		"bits-ui": "^2.18.1",
+		"clsx": "^2.1.1",
+		"layerchart": "^1.0.13",
+		"motion": "^12.42.0",
+		"svelte-toolbelt": "^0.10.6",
+		"tailwind-merge": "^3.6.0"
 	}
 }
